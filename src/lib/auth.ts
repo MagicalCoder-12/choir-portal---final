@@ -1,11 +1,10 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import { db } from "@/lib/db"
+import { supabase } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(db),
+  // Removed PrismaAdapter. Supabase does not require a NextAuth adapter for basic usage.
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -18,11 +17,17 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        const user = await db.user.findUnique({
-          where: {
-            email: credentials.email
-          }
-        })
+
+        // Supabase: Query user by email
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', credentials.email)
+          .single();
+
+        if (error || !user) {
+          return null;
+        }
 
         if (!user || !user.password) {
           return null
